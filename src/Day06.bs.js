@@ -6,14 +6,97 @@ var List = require("bs-platform/lib/js/list.js");
 var Path = require("path");
 var $$Array = require("bs-platform/lib/js/array.js");
 var Block = require("bs-platform/lib/js/block.js");
+var Caml_obj = require("bs-platform/lib/js/caml_obj.js");
 var Js_option = require("bs-platform/lib/js/js_option.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
+var Caml_option = require("bs-platform/lib/js/caml_option.js");
 var Belt_MapString = require("bs-platform/lib/js/belt_MapString.js");
 var Belt_SetString = require("bs-platform/lib/js/belt_SetString.js");
 
 var inputPath = "./src/" + (Path.parse("Day06.re").name + ".input");
 
 var input = Fs.readFileSync(inputPath, "utf8").split("\n");
+
+var empty = /* tuple */[
+  Belt_SetString.empty,
+  Belt_MapString.empty
+];
+
+function vertices(prim) {
+  return prim[0];
+}
+
+function addVertex(param, v) {
+  return /* tuple */[
+          Belt_SetString.add(param[0], v),
+          param[1]
+        ];
+}
+
+function addEdge(param, v1, v2) {
+  var vs$prime = Belt_SetString.mergeMany(param[0], /* array */[
+        v1,
+        v2
+      ]);
+  var newEdges = Belt_MapString.fromArray(/* array */[
+        /* tuple */[
+          v1,
+          Belt_SetString.fromArray(/* array */[v2])
+        ],
+        /* tuple */[
+          v2,
+          Belt_SetString.fromArray(/* array */[v1])
+        ]
+      ]);
+  var es$prime = Belt_MapString.merge(param[1], newEdges, (function (param, v1, v2) {
+          var mxs = v1;
+          var mys = v2;
+          if (mxs !== undefined) {
+            if (mys !== undefined) {
+              return Caml_option.some(Belt_SetString.union(Caml_option.valFromOption(mxs), Caml_option.valFromOption(mys)));
+            } else {
+              return mxs;
+            }
+          } else {
+            return mys;
+          }
+        }));
+  return /* tuple */[
+          vs$prime,
+          es$prime
+        ];
+}
+
+function neighbors(param, v) {
+  return Belt_MapString.getExn(param[1], v);
+}
+
+var Graph = /* module */[
+  /* empty */empty,
+  /* vertices */vertices,
+  /* addVertex */addVertex,
+  /* addEdge */addEdge,
+  /* neighbors */neighbors
+];
+
+function tree_of_graph(g, root) {
+  var go = function (g, visited, v) {
+    var neighbors$1 = Belt_SetString.toList(Belt_SetString.diff(neighbors(g, v), visited));
+    var match = List.length(neighbors$1) === 0;
+    if (match) {
+      return /* Leaf */Block.__(1, [v]);
+    } else {
+      var partial_arg = Belt_SetString.add(visited, v);
+      return /* Node */Block.__(0, [
+                v,
+                List.map((function (param) {
+                        return go(g, partial_arg, param);
+                      }), neighbors$1)
+              ]);
+    }
+  };
+  return go(g, Belt_SetString.empty, root);
+}
 
 var dummy_input = /* array */[
   "COM)B",
@@ -29,39 +112,6 @@ var dummy_input = /* array */[
   "K)L"
 ];
 
-var objects = $$Array.fold_left(Belt_SetString.add, Belt_SetString.empty, input.join(")").split(")"));
-
-var orbitedBy = $$Array.fold_left((function (orbitedBy, param) {
-        var satellite = param[1];
-        return Belt_MapString.update(orbitedBy, param[0], (function (satellites) {
-                      return /* :: */[
-                              satellite,
-                              Js_option.getWithDefault(/* [] */0, satellites)
-                            ];
-                    }));
-      }), Belt_MapString.empty, $$Array.map((function (arr) {
-            return /* tuple */[
-                    Caml_array.caml_array_get(arr, 0),
-                    Caml_array.caml_array_get(arr, 1)
-                  ];
-          }), $$Array.map((function (param) {
-                return param.split(")");
-              }), input)));
-
-function tree_of_map(map, root) {
-  var match = Belt_MapString.get(map, root);
-  if (match !== undefined) {
-    return /* Node */Block.__(0, [
-              root,
-              List.map((function (param) {
-                      return tree_of_map(map, param);
-                    }), match)
-            ]);
-  } else {
-    return /* Leaf */Block.__(1, [root]);
-  }
-}
-
 function sumTreeDepths(tree) {
   var go = function (tree, depth) {
     if (tree.tag) {
@@ -75,28 +125,99 @@ function sumTreeDepths(tree) {
   return go(tree, 0);
 }
 
-var orbitsTree = tree_of_map(orbitedBy, "COM");
+var graph = $$Array.fold_left((function (g, param) {
+        return addEdge(g, param[0], param[1]);
+      }), empty, $$Array.map((function (arr) {
+            return /* tuple */[
+                    Caml_array.caml_array_get(arr, 0),
+                    Caml_array.caml_array_get(arr, 1)
+                  ];
+          }), $$Array.map((function (param) {
+                return param.split(")");
+              }), input)));
 
-var result = sumTreeDepths(orbitsTree);
+var tree = tree_of_graph(graph, "COM");
+
+var result = sumTreeDepths(tree);
 
 console.log("Part1 result: ", result);
 
 var Part1 = /* module */[
-  /* objects */objects,
-  /* orbitedBy */orbitedBy,
-  /* tree_of_map */tree_of_map,
+  /* dummy_input */dummy_input,
   /* sumTreeDepths */sumTreeDepths,
-  /* orbitsTree */orbitsTree,
+  /* graph */graph,
+  /* tree */tree,
   /* result */result
 ];
 
-console.log("Part2 result: ", "TBD");
+function findDepthOf(tree, name) {
+  var go = function (tree, depth, name) {
+    if (tree.tag) {
+      var match = Caml_obj.caml_equal(name, tree[0]);
+      if (match) {
+        return depth;
+      } else {
+        return undefined;
+      }
+    } else {
+      var match$1 = Caml_obj.caml_equal(name, tree[0]);
+      if (match$1) {
+        return depth;
+      } else {
+        return List.fold_left(Js_option.firstSome, undefined, List.map((function (t) {
+                          return go(t, depth + 1 | 0, name);
+                        }), tree[1]));
+      }
+    }
+  };
+  return Js_option.getExn(go(tree, 0, name));
+}
 
-var Part2 = /* module */[];
+var dummy_input$1 = /* array */[
+  "COM)B",
+  "B)C",
+  "C)D",
+  "D)E",
+  "E)F",
+  "B)G",
+  "G)H",
+  "D)I",
+  "E)J",
+  "J)K",
+  "K)L",
+  "K)YOU",
+  "I)SAN"
+];
+
+var graph$1 = $$Array.fold_left((function (g, param) {
+        return addEdge(g, param[0], param[1]);
+      }), empty, $$Array.map((function (arr) {
+            return /* tuple */[
+                    Caml_array.caml_array_get(arr, 0),
+                    Caml_array.caml_array_get(arr, 1)
+                  ];
+          }), $$Array.map((function (param) {
+                return param.split(")");
+              }), input)));
+
+var tree$1 = tree_of_graph(graph$1, "YOU");
+
+var result$1 = findDepthOf(tree$1, "SAN") - 2 | 0;
+
+console.log("Part2 result: ", result$1);
+
+var Part2 = /* module */[
+  /* findDepthOf */findDepthOf,
+  /* dummy_input */dummy_input$1,
+  /* graph */graph$1,
+  /* tree */tree$1,
+  /* result */result$1
+];
 
 exports.inputPath = inputPath;
 exports.input = input;
-exports.dummy_input = dummy_input;
+exports.Graph = Graph;
+exports.tree_of_graph = tree_of_graph;
 exports.Part1 = Part1;
 exports.Part2 = Part2;
 /* inputPath Not a pure module */
