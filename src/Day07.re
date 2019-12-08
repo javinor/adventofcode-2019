@@ -38,7 +38,12 @@ let getByMode = (program, address, mode) => {
   };
 };
 
-let runProgram = (program, inputs) => {
+type code =
+  | Halt
+  | Input
+  | Output(int);
+
+let runProgram = (program, instructionPointer, inputs) => {
   let inputs = Array.copy(inputs);
 
   let rec go = (instructionPointer, program) => {
@@ -46,7 +51,6 @@ let runProgram = (program, inputs) => {
     let opcode = parseOpcode(instruction);
     let modes = parseModes(instruction);
 
-    // Js.log2("instruction, opcode, modes, inputs, outputs: ", (instruction, opcode, modes, inputs, outputs))
     switch (opcode) {
     | 1 =>
       let value1 = getByMode(program, instructionPointer + 1, modes[0]);
@@ -61,13 +65,16 @@ let runProgram = (program, inputs) => {
       program[resultAddress] = value1 * value2;
       go(instructionPointer + 4, program);
     | 3 =>
-      let resultAddress = program[instructionPointer + 1];
-      program[resultAddress] = Js.Array.shift(inputs) |> Js.Option.getExn;
-      go(instructionPointer + 2, program);
+      switch (Js.Array.shift(inputs: array(int))) {
+      | None => (program, instructionPointer, Input)
+      | Some(input) =>
+        let resultAddress = program[instructionPointer + 1];
+        program[resultAddress] = input;
+        go(instructionPointer + 2, program);
+      }
     | 4 =>
       let value = getByMode(program, instructionPointer + 1, modes[0]);
-      let _ = Js.Array.push(value, inputs);
-      go(instructionPointer + 2, program);
+      (program, instructionPointer + 2, Output(value));
     | 5 =>
       let value1 = getByMode(program, instructionPointer + 1, modes[0]);
       let value2 = getByMode(program, instructionPointer + 2, modes[1]);
@@ -92,12 +99,12 @@ let runProgram = (program, inputs) => {
       let resultAddress = program[instructionPointer + 3];
       program[resultAddress] = value1 == value2 ? 1 : 0;
       go(instructionPointer + 4, program);
-    | 99 => (program, inputs)
+    | 99 => (program, instructionPointer, Halt)
     | opcode => failwith("invalid opcode: " ++ string_of_int(opcode))
     };
   };
 
-  go(0, Array.copy(program));
+  go(instructionPointer, Array.copy(program));
 };
 
 let permutations = xs => {
@@ -134,8 +141,12 @@ module Part1 = {
 
     seq
     |> Array.iter(setting => {
-         let (_, outputs) = runProgram(program, [|setting, value^|]);
-         value := outputs[0];
+         let (_, _, output) = runProgram(program, 0, [|setting, value^|]);
+         switch (output) {
+         | Halt
+         | Input => failwith("program should finish with output")
+         | Output(output) => value := output
+         };
        });
 
     value^;
@@ -158,27 +169,42 @@ module Part2 = {
   let initialProgram =
     input |> Js.String.split(",") |> Array.map(int_of_string);
 
-  // let settingSequences = permutations(Belt.Array.range(5, 9));
+  let settingSequences = permutations(Belt.Array.range(5, 9));
 
   let runSequence = (seq: array(int)) => {
-    let value = ref(0);
-    let program = ref(initialProgram);
+    let amps =
+      Array.init(5, ii =>
+        runProgram(Array.copy(initialProgram), 0, [|seq[ii]|])
+      );
 
-    seq
-    |> Array.iter(setting => {
-        //  Js.log3("[|setting, value^|] : ", setting, value^);
-         let (_, outputs) =
-           runProgram(program^, [|setting, value^|]);
-        //  Js.log3("program', outputs : ", program', outputs);
-         value := outputs[0];
-        //  program := program';
-       });
+    let outputs = Array.make(5, 0);
+    let input = ref(0);
+    let break = ref(false);
 
-    Js.log2("value: ", value)
-    value^;
+    while (! break^) {
+      for (ii in 0 to 4) {
+        if (! break^) {
+          let (program, instructionPointer, _) = amps[ii];
+          amps[ii] = runProgram(program, instructionPointer, [|input^|]);
+          let (_, _, code) = amps[ii];
+          switch (code) {
+          | Halt => break := true
+          | Input => failwith("should not get here")
+          | Output(output) =>
+            input := output;
+            outputs[ii] = output;
+          };
+        };
+      };
+    };
+
+    outputs[4];
   };
 
-  runSequence([|9, 7, 8, 5, 6|]);
+  let result =
+    settingSequences
+    |> Array.map(runSequence)
+    |> Array.fold_left(max, min_int);
 
-  Js.log2("Part2 result: ", "TBD");
+  Js.log2("Part2 result: ", result);
 };

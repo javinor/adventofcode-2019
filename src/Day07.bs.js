@@ -6,14 +6,12 @@ var List = require("bs-platform/lib/js/list.js");
 var Path = require("path");
 var $$Array = require("bs-platform/lib/js/array.js");
 var Caml_obj = require("bs-platform/lib/js/caml_obj.js");
-var Js_option = require("bs-platform/lib/js/js_option.js");
 var Belt_Array = require("bs-platform/lib/js/belt_Array.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Caml_int32 = require("bs-platform/lib/js/caml_int32.js");
 var Pervasives = require("bs-platform/lib/js/pervasives.js");
 var Belt_SetInt = require("bs-platform/lib/js/belt_SetInt.js");
 var Caml_format = require("bs-platform/lib/js/caml_format.js");
-var Caml_option = require("bs-platform/lib/js/caml_option.js");
 
 var inputPath = "./src/" + (Path.parse("Day07.re").name + ".input");
 
@@ -83,13 +81,13 @@ function getByMode(program, address, mode) {
   }
 }
 
-function runProgram(program, inputs) {
+function runProgram(program, instructionPointer, inputs) {
   var inputs$1 = $$Array.copy(inputs);
-  var _instructionPointer = 0;
+  var _instructionPointer = instructionPointer;
   var program$1 = $$Array.copy(program);
   while(true) {
-    var instructionPointer = _instructionPointer;
-    var instruction = Caml_array.caml_array_get(program$1, instructionPointer);
+    var instructionPointer$1 = _instructionPointer;
+    var instruction = Caml_array.caml_array_get(program$1, instructionPointer$1);
     var opcode = instruction % 100;
     var modes = parseModes(instruction);
     if (opcode >= 9) {
@@ -98,64 +96,76 @@ function runProgram(program, inputs) {
       } else {
         return /* tuple */[
                 program$1,
-                inputs$1
+                instructionPointer$1,
+                /* Halt */0
               ];
       }
     } else if (opcode > 0) {
       switch (opcode - 1 | 0) {
         case 0 : 
-            var value1 = getByMode(program$1, instructionPointer + 1 | 0, Caml_array.caml_array_get(modes, 0));
-            var value2 = getByMode(program$1, instructionPointer + 2 | 0, Caml_array.caml_array_get(modes, 1));
-            var resultAddress = Caml_array.caml_array_get(program$1, instructionPointer + 3 | 0);
+            var value1 = getByMode(program$1, instructionPointer$1 + 1 | 0, Caml_array.caml_array_get(modes, 0));
+            var value2 = getByMode(program$1, instructionPointer$1 + 2 | 0, Caml_array.caml_array_get(modes, 1));
+            var resultAddress = Caml_array.caml_array_get(program$1, instructionPointer$1 + 3 | 0);
             Caml_array.caml_array_set(program$1, resultAddress, value1 + value2 | 0);
-            _instructionPointer = instructionPointer + 4 | 0;
+            _instructionPointer = instructionPointer$1 + 4 | 0;
             continue ;
         case 1 : 
-            var value1$1 = getByMode(program$1, instructionPointer + 1 | 0, Caml_array.caml_array_get(modes, 0));
-            var value2$1 = getByMode(program$1, instructionPointer + 2 | 0, Caml_array.caml_array_get(modes, 1));
-            var resultAddress$1 = Caml_array.caml_array_get(program$1, instructionPointer + 3 | 0);
+            var value1$1 = getByMode(program$1, instructionPointer$1 + 1 | 0, Caml_array.caml_array_get(modes, 0));
+            var value2$1 = getByMode(program$1, instructionPointer$1 + 2 | 0, Caml_array.caml_array_get(modes, 1));
+            var resultAddress$1 = Caml_array.caml_array_get(program$1, instructionPointer$1 + 3 | 0);
             Caml_array.caml_array_set(program$1, resultAddress$1, Caml_int32.imul(value1$1, value2$1));
-            _instructionPointer = instructionPointer + 4 | 0;
+            _instructionPointer = instructionPointer$1 + 4 | 0;
             continue ;
         case 2 : 
-            var resultAddress$2 = Caml_array.caml_array_get(program$1, instructionPointer + 1 | 0);
-            Caml_array.caml_array_set(program$1, resultAddress$2, Js_option.getExn(Caml_option.undefined_to_opt(inputs$1.shift())));
-            _instructionPointer = instructionPointer + 2 | 0;
-            continue ;
+            var match = inputs$1.shift();
+            if (match !== undefined) {
+              var resultAddress$2 = Caml_array.caml_array_get(program$1, instructionPointer$1 + 1 | 0);
+              Caml_array.caml_array_set(program$1, resultAddress$2, match);
+              _instructionPointer = instructionPointer$1 + 2 | 0;
+              continue ;
+            } else {
+              return /* tuple */[
+                      program$1,
+                      instructionPointer$1,
+                      /* Input */1
+                    ];
+            }
         case 3 : 
-            var value = getByMode(program$1, instructionPointer + 1 | 0, Caml_array.caml_array_get(modes, 0));
-            inputs$1.push(value);
-            _instructionPointer = instructionPointer + 2 | 0;
-            continue ;
+            var value = getByMode(program$1, instructionPointer$1 + 1 | 0, Caml_array.caml_array_get(modes, 0));
+            return /* tuple */[
+                    program$1,
+                    instructionPointer$1 + 2 | 0,
+                    /* Output */[value]
+                  ];
         case 4 : 
-            var value1$2 = getByMode(program$1, instructionPointer + 1 | 0, Caml_array.caml_array_get(modes, 0));
-            var value2$2 = getByMode(program$1, instructionPointer + 2 | 0, Caml_array.caml_array_get(modes, 1));
-            var match = value1$2 !== 0;
-            var nextInstructionPointer = match ? value2$2 : instructionPointer + 3 | 0;
+            var value1$2 = getByMode(program$1, instructionPointer$1 + 1 | 0, Caml_array.caml_array_get(modes, 0));
+            var value2$2 = getByMode(program$1, instructionPointer$1 + 2 | 0, Caml_array.caml_array_get(modes, 1));
+            var match$1 = value1$2 !== 0;
+            var nextInstructionPointer = match$1 ? value2$2 : instructionPointer$1 + 3 | 0;
             _instructionPointer = nextInstructionPointer;
             continue ;
         case 5 : 
-            var value1$3 = getByMode(program$1, instructionPointer + 1 | 0, Caml_array.caml_array_get(modes, 0));
-            var value2$3 = getByMode(program$1, instructionPointer + 2 | 0, Caml_array.caml_array_get(modes, 1));
-            var match$1 = value1$3 === 0;
-            var nextInstructionPointer$1 = match$1 ? value2$3 : instructionPointer + 3 | 0;
+            var value1$3 = getByMode(program$1, instructionPointer$1 + 1 | 0, Caml_array.caml_array_get(modes, 0));
+            var value2$3 = getByMode(program$1, instructionPointer$1 + 2 | 0, Caml_array.caml_array_get(modes, 1));
+            var match$2 = value1$3 === 0;
+            var nextInstructionPointer$1 = match$2 ? value2$3 : instructionPointer$1 + 3 | 0;
             _instructionPointer = nextInstructionPointer$1;
             continue ;
         case 6 : 
-            var value1$4 = getByMode(program$1, instructionPointer + 1 | 0, Caml_array.caml_array_get(modes, 0));
-            var value2$4 = getByMode(program$1, instructionPointer + 2 | 0, Caml_array.caml_array_get(modes, 1));
-            var resultAddress$3 = Caml_array.caml_array_get(program$1, instructionPointer + 3 | 0);
-            var match$2 = value1$4 < value2$4;
-            Caml_array.caml_array_set(program$1, resultAddress$3, match$2 ? 1 : 0);
-            _instructionPointer = instructionPointer + 4 | 0;
+            var value1$4 = getByMode(program$1, instructionPointer$1 + 1 | 0, Caml_array.caml_array_get(modes, 0));
+            var value2$4 = getByMode(program$1, instructionPointer$1 + 2 | 0, Caml_array.caml_array_get(modes, 1));
+            var resultAddress$3 = Caml_array.caml_array_get(program$1, instructionPointer$1 + 3 | 0);
+            var match$3 = value1$4 < value2$4;
+            Caml_array.caml_array_set(program$1, resultAddress$3, match$3 ? 1 : 0);
+            _instructionPointer = instructionPointer$1 + 4 | 0;
             continue ;
         case 7 : 
-            var value1$5 = getByMode(program$1, instructionPointer + 1 | 0, Caml_array.caml_array_get(modes, 0));
-            var value2$5 = getByMode(program$1, instructionPointer + 2 | 0, Caml_array.caml_array_get(modes, 1));
-            var resultAddress$4 = Caml_array.caml_array_get(program$1, instructionPointer + 3 | 0);
-            var match$3 = value1$5 === value2$5;
-            Caml_array.caml_array_set(program$1, resultAddress$4, match$3 ? 1 : 0);
-            _instructionPointer = instructionPointer + 4 | 0;
+            var value1$5 = getByMode(program$1, instructionPointer$1 + 1 | 0, Caml_array.caml_array_get(modes, 0));
+            var value2$5 = getByMode(program$1, instructionPointer$1 + 2 | 0, Caml_array.caml_array_get(modes, 1));
+            var resultAddress$4 = Caml_array.caml_array_get(program$1, instructionPointer$1 + 3 | 0);
+            var match$4 = value1$5 === value2$5;
+            Caml_array.caml_array_set(program$1, resultAddress$4, match$4 ? 1 : 0);
+            _instructionPointer = instructionPointer$1 + 4 | 0;
             continue ;
         
       }
@@ -191,12 +201,17 @@ var settingSequences = permutations(Belt_Array.range(0, 4));
 function runSequence(seq) {
   var value = /* record */[/* contents */0];
   $$Array.iter((function (setting) {
-          var match = runProgram(program, /* array */[
+          var match = runProgram(program, 0, /* array */[
                 setting,
                 value[0]
               ]);
-          value[0] = Caml_array.caml_array_get(match[1], 0);
-          return /* () */0;
+          var output = match[2];
+          if (typeof output === "number") {
+            return Pervasives.failwith("program should finish with output");
+          } else {
+            value[0] = output[0];
+            return /* () */0;
+          }
         }), seq);
   return value[0];
 }
@@ -214,34 +229,49 @@ var Part1 = /* module */[
 
 var initialProgram = $$Array.map(Caml_format.caml_int_of_string, input.split(","));
 
+var settingSequences$1 = permutations(Belt_Array.range(5, 9));
+
 function runSequence$1(seq) {
-  var value = /* record */[/* contents */0];
-  var program = /* record */[/* contents */initialProgram];
-  $$Array.iter((function (setting) {
-          var match = runProgram(program[0], /* array */[
-                setting,
-                value[0]
-              ]);
-          value[0] = Caml_array.caml_array_get(match[1], 0);
-          return /* () */0;
-        }), seq);
-  console.log("value: ", value);
-  return value[0];
+  var amps = $$Array.init(5, (function (ii) {
+          return runProgram($$Array.copy(initialProgram), 0, /* array */[Caml_array.caml_array_get(seq, ii)]);
+        }));
+  var outputs = Caml_array.caml_make_vect(5, 0);
+  var input = 0;
+  var $$break = false;
+  while(!$$break) {
+    for(var ii = 0; ii <= 4; ++ii){
+      if (!$$break) {
+        var match = Caml_array.caml_array_get(amps, ii);
+        Caml_array.caml_array_set(amps, ii, runProgram(match[0], match[1], /* array */[input]));
+        var match$1 = Caml_array.caml_array_get(amps, ii);
+        var code = match$1[2];
+        if (typeof code === "number") {
+          if (code !== 0) {
+            Pervasives.failwith("should not get here");
+          } else {
+            $$break = true;
+          }
+        } else {
+          var output = code[0];
+          input = output;
+          Caml_array.caml_array_set(outputs, ii, output);
+        }
+      }
+      
+    }
+  };
+  return Caml_array.caml_array_get(outputs, 4);
 }
 
-runSequence$1(/* array */[
-      9,
-      7,
-      8,
-      5,
-      6
-    ]);
+var result$1 = $$Array.fold_left(Caml_obj.caml_max, Pervasives.min_int, $$Array.map(runSequence$1, settingSequences$1));
 
-console.log("Part2 result: ", "TBD");
+console.log("Part2 result: ", result$1);
 
 var Part2 = /* module */[
   /* initialProgram */initialProgram,
-  /* runSequence */runSequence$1
+  /* settingSequences */settingSequences$1,
+  /* runSequence */runSequence$1,
+  /* result */result$1
 ];
 
 exports.inputPath = inputPath;
