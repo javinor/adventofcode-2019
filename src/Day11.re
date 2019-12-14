@@ -91,7 +91,7 @@ module HullPaintingRobot: {
 
   let countPaintedPanels = ({hull}) => Belt.Map.size(hull);
 
-  let printHull = ({hull, robot}) => {
+  let printHull = ({hull, robot: _}) => {
     let coords = Belt.Map.keysToArray(hull);
     let (minX, maxX, minY, maxY) =
       coords
