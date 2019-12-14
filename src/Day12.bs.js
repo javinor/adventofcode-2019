@@ -4,7 +4,6 @@
 var Fs = require("fs");
 var Path = require("path");
 var $$Array = require("bs-platform/lib/js/array.js");
-var Block = require("bs-platform/lib/js/block.js");
 var Js_option = require("bs-platform/lib/js/js_option.js");
 var Caml_array = require("bs-platform/lib/js/caml_array.js");
 var Caml_int32 = require("bs-platform/lib/js/caml_int32.js");
@@ -13,13 +12,12 @@ var Caml_format = require("bs-platform/lib/js/caml_format.js");
 var Caml_option = require("bs-platform/lib/js/caml_option.js");
 var Caml_primitive = require("bs-platform/lib/js/caml_primitive.js");
 var Caml_js_exceptions = require("bs-platform/lib/js/caml_js_exceptions.js");
-var Caml_builtin_exceptions = require("bs-platform/lib/js/caml_builtin_exceptions.js");
 
 var inputPath = "./src/" + (Path.parse("Day12.re").name + ".input");
 
 var input = Fs.readFileSync(inputPath, "utf8").split("\n");
 
-function parsePoint(str) {
+function parseMoon(str) {
   var re = (/^<x=(.+), y=(.+), z=(.+)>$/);
   var exit = 0;
   var val;
@@ -42,16 +40,16 @@ function parsePoint(str) {
       var y = val[1];
       var z = val[2];
       return /* tuple */[
-              /* Position */Block.__(0, [
-                  x,
-                  y,
-                  z
-                ]),
-              /* Velocity */Block.__(1, [
-                  0,
-                  0,
-                  0
-                ])
+              /* record */[
+                /* x */x,
+                /* y */y,
+                /* z */z
+              ],
+              /* record */[
+                /* vx */0,
+                /* vy */0,
+                /* vz */0
+              ]
             ];
     }
   }
@@ -72,223 +70,108 @@ function sign(n) {
   }
 }
 
-function applyGravity(p1, p2) {
-  var match = p1[0];
-  if (match.tag) {
-    throw [
-          Caml_builtin_exceptions.match_failure,
-          /* tuple */[
-            "Day12.re",
-            30,
-            8
-          ]
+function applyGravity(moon1, moon2) {
+  var match = moon2[1];
+  var p2 = moon2[0];
+  var match$1 = moon1[1];
+  var p1 = moon1[0];
+  var dvx1 = sign(Caml_primitive.caml_int_compare(p2[/* x */0], p1[/* x */0]));
+  var dvy1 = sign(Caml_primitive.caml_int_compare(p2[/* y */1], p1[/* y */1]));
+  var dvz1 = sign(Caml_primitive.caml_int_compare(p2[/* z */2], p1[/* z */2]));
+  var dvx2 = Caml_int32.imul(-1, dvx1);
+  var dvy2 = Caml_int32.imul(-1, dvy1);
+  var dvz2 = Caml_int32.imul(-1, dvz1);
+  var newMoon1_001 = /* record */[
+    /* vx */match$1[/* vx */0] + dvx1 | 0,
+    /* vy */match$1[/* vy */1] + dvy1 | 0,
+    /* vz */match$1[/* vz */2] + dvz1 | 0
+  ];
+  var newMoon1 = /* tuple */[
+    p1,
+    newMoon1_001
+  ];
+  var newMoon2_001 = /* record */[
+    /* vx */match[/* vx */0] + dvx2 | 0,
+    /* vy */match[/* vy */1] + dvy2 | 0,
+    /* vz */match[/* vz */2] + dvz2 | 0
+  ];
+  var newMoon2 = /* tuple */[
+    p2,
+    newMoon2_001
+  ];
+  return /* tuple */[
+          newMoon1,
+          newMoon2
         ];
-  } else {
-    var match$1 = p1[1];
-    var z1 = match[2];
-    var y1 = match[1];
-    var x1 = match[0];
-    if (match$1.tag) {
-      var match$2 = p2[0];
-      if (match$2.tag) {
-        throw [
-              Caml_builtin_exceptions.match_failure,
-              /* tuple */[
-                "Day12.re",
-                31,
-                8
-              ]
-            ];
-      } else {
-        var match$3 = p2[1];
-        var z2 = match$2[2];
-        var y2 = match$2[1];
-        var x2 = match$2[0];
-        if (match$3.tag) {
-          var dvx1 = sign(Caml_primitive.caml_int_compare(x2, x1));
-          var dvy1 = sign(Caml_primitive.caml_int_compare(y2, y1));
-          var dvz1 = sign(Caml_primitive.caml_int_compare(z2, z1));
-          var dvx2 = Caml_int32.imul(-1, dvx1);
-          var dvy2 = Caml_int32.imul(-1, dvy1);
-          var dvz2 = Caml_int32.imul(-1, dvz1);
-          var p1$prime_000 = /* Position */Block.__(0, [
-              x1,
-              y1,
-              z1
-            ]);
-          var p1$prime_001 = /* Velocity */Block.__(1, [
-              match$1[0] + dvx1 | 0,
-              match$1[1] + dvy1 | 0,
-              match$1[2] + dvz1 | 0
-            ]);
-          var p1$prime = /* tuple */[
-            p1$prime_000,
-            p1$prime_001
-          ];
-          var p2$prime_000 = /* Position */Block.__(0, [
-              x2,
-              y2,
-              z2
-            ]);
-          var p2$prime_001 = /* Velocity */Block.__(1, [
-              match$3[0] + dvx2 | 0,
-              match$3[1] + dvy2 | 0,
-              match$3[2] + dvz2 | 0
-            ]);
-          var p2$prime = /* tuple */[
-            p2$prime_000,
-            p2$prime_001
-          ];
-          return /* tuple */[
-                  p1$prime,
-                  p2$prime
-                ];
-        } else {
-          throw [
-                Caml_builtin_exceptions.match_failure,
-                /* tuple */[
-                  "Day12.re",
-                  31,
-                  8
-                ]
-              ];
-        }
-      }
-    } else {
-      throw [
-            Caml_builtin_exceptions.match_failure,
-            /* tuple */[
-              "Day12.re",
-              30,
-              8
-            ]
-          ];
-    }
-  }
 }
 
-function applyVelocity(p) {
-  var match = p[0];
-  if (match.tag) {
-    throw [
-          Caml_builtin_exceptions.match_failure,
-          /* tuple */[
-            "Day12.re",
-            54,
-            8
-          ]
+function applyVelocity(param) {
+  var v = param[1];
+  var match = param[0];
+  return /* tuple */[
+          /* record */[
+            /* x */match[/* x */0] + v[/* vx */0] | 0,
+            /* y */match[/* y */1] + v[/* vy */1] | 0,
+            /* z */match[/* z */2] + v[/* vz */2] | 0
+          ],
+          v
         ];
-  } else {
-    var match$1 = p[1];
-    if (match$1.tag) {
-      var vz = match$1[2];
-      var vy = match$1[1];
-      var vx = match$1[0];
-      return /* tuple */[
-              /* Position */Block.__(0, [
-                  match[0] + vx | 0,
-                  match[1] + vy | 0,
-                  match[2] + vz | 0
-                ]),
-              /* Velocity */Block.__(1, [
-                  vx,
-                  vy,
-                  vz
-                ])
-            ];
-    } else {
-      throw [
-            Caml_builtin_exceptions.match_failure,
-            /* tuple */[
-              "Day12.re",
-              54,
-              8
-            ]
-          ];
-    }
-  }
 }
 
-function totalEnergy(p) {
-  var match = p[0];
-  if (match.tag) {
-    throw [
-          Caml_builtin_exceptions.match_failure,
-          /* tuple */[
-            "Day12.re",
-            60,
-            8
-          ]
-        ];
-  } else {
-    var match$1 = p[1];
-    if (match$1.tag) {
-      var energy = function (coords) {
-        return $$Array.fold_left((function (prim, prim$1) {
-                      return prim + prim$1 | 0;
-                    }), 0, $$Array.map(Pervasives.abs, coords));
-      };
-      return Caml_int32.imul(energy(/* array */[
-                      match[0],
-                      match[1],
-                      match[2]
-                    ]), energy(/* array */[
-                      match$1[0],
-                      match$1[1],
-                      match$1[2]
-                    ]));
-    } else {
-      throw [
-            Caml_builtin_exceptions.match_failure,
-            /* tuple */[
-              "Day12.re",
-              60,
-              8
-            ]
-          ];
-    }
-  }
+function totalEnergy(param) {
+  var match = param[1];
+  var match$1 = param[0];
+  var energy = function (coords) {
+    return $$Array.fold_left((function (prim, prim$1) {
+                  return prim + prim$1 | 0;
+                }), 0, $$Array.map(Pervasives.abs, coords));
+  };
+  return Caml_int32.imul(energy(/* array */[
+                  match$1[/* x */0],
+                  match$1[/* y */1],
+                  match$1[/* z */2]
+                ]), energy(/* array */[
+                  match[/* vx */0],
+                  match[/* vy */1],
+                  match[/* vz */2]
+                ]));
 }
 
-function tick(pvs, n) {
-  var _pvs = $$Array.copy(pvs);
+function tick(moons, n) {
+  var _moons = $$Array.copy(moons);
   var _n = n;
   while(true) {
     var n$1 = _n;
-    var pvs$1 = _pvs;
+    var moons$1 = _moons;
     if (n$1 === 0) {
-      return pvs$1;
+      return moons$1;
     } else {
-      for(var i = 0 ,i_finish = pvs$1.length - 1 | 0; i <= i_finish; ++i){
-        for(var j = i + 1 | 0 ,j_finish = pvs$1.length - 1 | 0; j <= j_finish; ++j){
-          var match = applyGravity(Caml_array.caml_array_get(pvs$1, i), Caml_array.caml_array_get(pvs$1, j));
-          Caml_array.caml_array_set(pvs$1, i, match[0]);
-          Caml_array.caml_array_set(pvs$1, j, match[1]);
+      for(var i = 0 ,i_finish = moons$1.length - 1 | 0; i <= i_finish; ++i){
+        for(var j = i + 1 | 0 ,j_finish = moons$1.length - 1 | 0; j <= j_finish; ++j){
+          var match = applyGravity(Caml_array.caml_array_get(moons$1, i), Caml_array.caml_array_get(moons$1, j));
+          Caml_array.caml_array_set(moons$1, i, match[0]);
+          Caml_array.caml_array_set(moons$1, j, match[1]);
         }
       }
-      var pvs$prime = $$Array.map(applyVelocity, pvs$1);
+      var nextMoons = $$Array.map(applyVelocity, moons$1);
       _n = n$1 - 1 | 0;
-      _pvs = pvs$prime;
+      _moons = nextMoons;
       continue ;
     }
   };
 }
 
-var pvs = $$Array.map(parsePoint, input);
+var moons = $$Array.map(parseMoon, input);
 
 var result = $$Array.fold_left((function (prim, prim$1) {
         return prim + prim$1 | 0;
-      }), 0, $$Array.map(totalEnergy, tick(pvs, 1000)));
+      }), 0, $$Array.map(totalEnergy, tick(moons, 1000)));
 
 console.log("Part1 output: ", result);
 
 var Part1 = /* module */[
-  /* sign */sign,
-  /* applyGravity */applyGravity,
-  /* applyVelocity */applyVelocity,
-  /* totalEnergy */totalEnergy,
   /* tick */tick,
-  /* pvs */pvs,
+  /* moons */moons,
   /* result */result
 ];
 
@@ -300,7 +183,11 @@ var Part2 = /* module */[/* result */result$1];
 
 exports.inputPath = inputPath;
 exports.input = input;
-exports.parsePoint = parsePoint;
+exports.parseMoon = parseMoon;
+exports.sign = sign;
+exports.applyGravity = applyGravity;
+exports.applyVelocity = applyVelocity;
+exports.totalEnergy = totalEnergy;
 exports.Part1 = Part1;
 exports.Part2 = Part2;
 /* inputPath Not a pure module */
