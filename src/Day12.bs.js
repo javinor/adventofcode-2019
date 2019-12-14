@@ -175,11 +175,114 @@ var Part1 = /* module */[
   /* result */result
 ];
 
-var result$1 = "TBD";
+function gcd(m, n) {
+  var go = function (_m, _n) {
+    while(true) {
+      var n = _n;
+      var m = _m;
+      var match = n === 0;
+      if (match) {
+        return m;
+      } else {
+        _n = Caml_int32.mod_(m, n);
+        _m = n;
+        continue ;
+      }
+    };
+  };
+  var m$1 = Pervasives.abs(m);
+  var n$1 = Pervasives.abs(n);
+  var match = n$1 > m$1;
+  if (match) {
+    return go(n$1, m$1);
+  } else {
+    return go(m$1, n$1);
+  }
+}
+
+function lcm(m, n) {
+  return m * n / gcd(m | 0, n | 0);
+}
+
+function calculatePeriods(initialMoons) {
+  var _moons = $$Array.copy(initialMoons);
+  var _nTicks = 0;
+  var periods = Caml_array.caml_make_vect(3, undefined);
+  while(true) {
+    var nTicks = _nTicks;
+    var moons = _moons;
+    if (periods.every(Js_option.isSome)) {
+      return $$Array.map((function (prim) {
+                    return prim;
+                  }), $$Array.map(Js_option.getExn, periods));
+    } else {
+      for(var i = 0 ,i_finish = moons.length - 1 | 0; i <= i_finish; ++i){
+        for(var j = i + 1 | 0 ,j_finish = moons.length - 1 | 0; j <= j_finish; ++j){
+          var match = applyGravity(Caml_array.caml_array_get(moons, i), Caml_array.caml_array_get(moons, j));
+          Caml_array.caml_array_set(moons, i, match[0]);
+          Caml_array.caml_array_set(moons, j, match[1]);
+        }
+      }
+      var nextMoons = $$Array.map(applyVelocity, moons);
+      var nTicks$prime = nTicks + 1 | 0;
+      if (nTicks$prime === 2772) {
+        console.log(nextMoons);
+      }
+      var periodOfX = nextMoons.every((function (param, i) {
+              if (param[0][/* x */0] === Caml_array.caml_array_get(initialMoons, i)[0][/* x */0]) {
+                return param[1][/* vx */0] === Caml_array.caml_array_get(initialMoons, i)[1][/* vx */0];
+              } else {
+                return false;
+              }
+            }));
+      var periodOfY = nextMoons.every((function (param, i) {
+              if (param[0][/* y */1] === Caml_array.caml_array_get(initialMoons, i)[0][/* y */1]) {
+                return param[1][/* vy */1] === Caml_array.caml_array_get(initialMoons, i)[1][/* vy */1];
+              } else {
+                return false;
+              }
+            }));
+      var periodOfZ = nextMoons.every((function (param, i) {
+              if (param[0][/* z */2] === Caml_array.caml_array_get(initialMoons, i)[0][/* z */2]) {
+                return param[1][/* vz */2] === Caml_array.caml_array_get(initialMoons, i)[1][/* vz */2];
+              } else {
+                return false;
+              }
+            }));
+      if (periodOfX && Js_option.isNone(Caml_array.caml_array_get(periods, 0))) {
+        Caml_array.caml_array_set(periods, 0, nTicks$prime);
+      }
+      if (periodOfY && Js_option.isNone(Caml_array.caml_array_get(periods, 1))) {
+        Caml_array.caml_array_set(periods, 1, nTicks$prime);
+      }
+      if (periodOfZ && Js_option.isNone(Caml_array.caml_array_get(periods, 2))) {
+        Caml_array.caml_array_set(periods, 2, nTicks$prime);
+      }
+      _nTicks = nTicks$prime;
+      _moons = nextMoons;
+      continue ;
+    }
+  };
+}
+
+var moons$1 = $$Array.map(parseMoon, input);
+
+var periods = calculatePeriods(moons$1);
+
+var result$1 = lcm(Caml_array.caml_array_get(periods, 0), lcm(Caml_array.caml_array_get(periods, 1), Caml_array.caml_array_get(periods, 2)));
 
 console.log("Part2 output: ", result$1);
 
-var Part2 = /* module */[/* result */result$1];
+console.log(periods);
+
+var Part2 = /* module */[
+  /* gcd */gcd,
+  /* lcm */lcm,
+  /* calculatePeriods */calculatePeriods,
+  /* moons */moons$1,
+  /* periods */periods,
+  /* result */result$1
+];
 
 exports.inputPath = inputPath;
 exports.input = input;

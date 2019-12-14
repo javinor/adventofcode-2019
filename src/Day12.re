@@ -87,15 +87,93 @@ module Part1 = {
 };
 
 module Part2 = {
+  let gcd = (m, n) => {
+    let rec go = (m, n) => {
+      n == 0 ? m : go(n, m mod n);
+    };
+
+    let m = abs(m);
+    let n = abs(n);
+    n > m ? go(n, m) : go(m, n);
+  };
+  let lcm = (m, n) =>
+    m *. n /. float(gcd(int_of_float(m), int_of_float(n)));
+
+  let calculatePeriods = initialMoons => {
+    let rec go = (moons, nTicks, periods) =>
+      // Js.log2(nTicks, moons);
+      if (Js.Array.every(Js.Option.isSome, periods)) {
+        periods |> Array.map(Js.Option.getExn) |> Array.map(float);
+      } else {
+        for (i in 0 to Array.length(moons) - 1) {
+          for (j in i + 1 to Array.length(moons) - 1) {
+            let (p1, p2) = applyGravity(moons[i], moons[j]);
+            moons[i] = p1;
+            moons[j] = p2;
+          };
+        };
+
+        let nextMoons = moons |> Array.map(applyVelocity);
+        let nTicks' = nTicks + 1;
+
+        if (nTicks' == 2772) {
+          Js.log(nextMoons);
+        };
+
+        let periodOfX =
+          nextMoons
+          |> Js.Array.everyi(((p, v), i) =>
+               p.x == fst(initialMoons[i]).x
+               && v.vx == snd(initialMoons[i]).vx
+             );
+        let periodOfY =
+          nextMoons
+          |> Js.Array.everyi(((p, v), i) =>
+               p.y == fst(initialMoons[i]).y
+               && v.vy == snd(initialMoons[i]).vy
+             );
+        let periodOfZ =
+          nextMoons
+          |> Js.Array.everyi(((p, v), i) =>
+               p.z == fst(initialMoons[i]).z
+               && v.vz == snd(initialMoons[i]).vz
+             );
+
+        if (periodOfX && Js.Option.isNone(periods[0])) {
+          periods[0] = Some(nTicks');
+        };
+        if (periodOfY && Js.Option.isNone(periods[1])) {
+          periods[1] = Some(nTicks');
+        };
+        if (periodOfZ && Js.Option.isNone(periods[2])) {
+          periods[2] = Some(nTicks');
+        };
+
+        go(nextMoons, nTicks', periods);
+      };
+
+    go(Array.copy(initialMoons), 0, Array.make(3, None));
+  };
+
   // let dummy_input = [|
   //   "<x=-1, y=0, z=2>",
   //   "<x=2, y=-10, z=-7>",
   //   "<x=4, y=-8, z=8>",
   //   "<x=3, y=5, z=-1>",
   // |];
+  // let dummy_input = [|
+  //   "<x=-8, y=-10, z=0>",
+  //   "<x=5, y=5, z=10>",
+  //   "<x=2, y=-7, z=3>",
+  //   "<x=9, y=-8, z=-3>",
+  // |];
   // let input = dummy_input;
 
-  let result = "TBD";
+  let moons = input |> Array.map(parseMoon);
+  let periods = calculatePeriods(moons);
+
+  let result = lcm(periods[0], lcm(periods[1], periods[2]));
 
   Js.log2("Part2 output: ", result);
+  Js.log(periods);
 };
