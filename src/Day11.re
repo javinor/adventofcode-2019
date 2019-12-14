@@ -10,7 +10,7 @@ module HullPaintingRobot: {
     | Left
     | Right;
 
-  let make: unit => t;
+  let make: color => t;
   let detectColor: t => color;
   let paintAndMove: (t, color, rotate) => t;
   let countPaintedPanels: t => int;
@@ -43,8 +43,8 @@ module HullPaintingRobot: {
     robot,
   };
 
-  let make = () => {
-    hull: Belt.Map.make(~id=(module Coords)),
+  let make = color => {
+    hull: Belt.Map.fromArray([|((0, 0), color)|], ~id=(module Coords)),
     robot: ((0, 0), Up),
   };
 
@@ -100,7 +100,6 @@ module HullPaintingRobot: {
              (min(minX, x), max(maxX, x), min(minY, y), max(maxY, y)),
            (max_int, min_int, max_int, min_int),
          );
-    // Js.log((minX, maxX, minY, maxY));
 
     let grid = Array.make_matrix(maxX - minX + 1, maxY - minY + 1, ".");
 
@@ -137,7 +136,7 @@ module Part1 = {
   let program = input |> Js.String.split(",") |> Array.map(float_of_string);
   let break = ref(false);
   let computer = ref(IntCodeComputer.make(program));
-  let robot = ref(HullPaintingRobot.make());
+  let robot = ref(HullPaintingRobot.make(HPR.Black));
 
   while (! break^) {
     let color =
@@ -173,23 +172,44 @@ module Part1 = {
 };
 
 module Part2 = {
-  // let program = input |> Js.String.split(",") |> Array.map(float_of_string);
-  // let break = ref(false);
-  // let computer = ref((program, 0, 0));
-  // while (! break^) {
-  //   let (prevProgram, prevInstructionPointer, prevRelativeBase) = computer^;
-  //   let (program, instructionPointer, relativeBase, output) =
-  //     runProgram(
-  //       prevProgram,
-  //       prevInstructionPointer,
-  //       prevRelativeBase,
-  //       [|2.|],
-  //     );
-  //   computer := (program, instructionPointer, relativeBase);
-  //   switch (output) {
-  //   | Halt => break := true
-  //   | Input => failwith("program should finish with output")
-  //   | Output(output) => Js.log3("Part2 output: ", output, "\n")
-  //   };
-  // };
+  module HPR = HullPaintingRobot;
+
+  let program = input |> Js.String.split(",") |> Array.map(float_of_string);
+  let break = ref(false);
+  let computer = ref(IntCodeComputer.make(program));
+  let robot = ref(HullPaintingRobot.make(HPR.White));
+
+  while (! break^) {
+    let color =
+      switch (HPR.detectColor(robot^)) {
+      | Black => 0.
+      | White => 1.
+      };
+
+    let (computer', exitCode1) = IntCodeComputer.run(computer^, [|color|]);
+
+    switch (exitCode1) {
+    | Halt => break := true
+    | Input => failwith("program should not request input here!")
+    | Output(value) =>
+      let newColor = value == 0. ? HPR.Black : White;
+      let (computer'', exitCode2) = IntCodeComputer.run(computer', [||]);
+
+      computer := computer'';
+
+      switch (exitCode2) {
+      | Halt => failwith("should not halt!")
+      | Input => failwith("should not request input!")
+      | Output(value) =>
+        let rotate = value == 0. ? HPR.Left : Right;
+
+        robot := HPR.paintAndMove(robot^, newColor, rotate);
+      };
+    };
+  };
+
+
+  let result = HPR.countPaintedPanels(robot^);
+  Js.log2("Part2 result:", result);
+  HPR.printHull(robot^)
 };

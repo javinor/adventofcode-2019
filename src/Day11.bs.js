@@ -21,9 +21,15 @@ var cmp = Caml_obj.caml_compare;
 
 var Coords = Belt_Id.MakeComparable(/* module */[/* cmp */cmp]);
 
-function make(param) {
+function make(color) {
   return /* record */[
-          /* hull */Belt_Map.make(Coords),
+          /* hull */Belt_Map.fromArray(/* array */[/* tuple */[
+                  /* tuple */[
+                    0,
+                    0
+                  ],
+                  color
+                ]], Coords),
           /* robot : tuple */[
             /* tuple */[
               0,
@@ -172,7 +178,7 @@ var $$break = /* record */[/* contents */false];
 
 var computer = /* record */[/* contents */IntCodeComputer$Adventofcode2019.make(undefined, program)];
 
-var robot = /* record */[/* contents */make(/* () */0)];
+var robot = /* record */[/* contents */make(/* Black */0)];
 
 while(!$$break[0]) {
   var match = detectColor(robot[0]);
@@ -218,7 +224,59 @@ var Part1 = /* module */[
   /* result */result
 ];
 
-var Part2 = /* module */[];
+var program$1 = $$Array.map(Caml_format.caml_float_of_string, input.split(","));
+
+var $$break$1 = /* record */[/* contents */false];
+
+var computer$1 = /* record */[/* contents */IntCodeComputer$Adventofcode2019.make(undefined, program$1)];
+
+var robot$1 = /* record */[/* contents */make(/* White */1)];
+
+while(!$$break$1[0]) {
+  var match$5 = detectColor(robot$1[0]);
+  var color$1 = match$5 ? 1 : 0;
+  var match$6 = IntCodeComputer$Adventofcode2019.run(computer$1[0], /* array */[color$1]);
+  var exitCode1$1 = match$6[1];
+  if (typeof exitCode1$1 === "number") {
+    if (exitCode1$1 !== 0) {
+      Pervasives.failwith("program should not request input here!");
+    } else {
+      $$break$1[0] = true;
+    }
+  } else {
+    var match$7 = exitCode1$1[0] === 0;
+    var newColor$1 = match$7 ? /* Black */0 : /* White */1;
+    var match$8 = IntCodeComputer$Adventofcode2019.run(match$6[0], /* array */[]);
+    var exitCode2$1 = match$8[1];
+    computer$1[0] = match$8[0];
+    if (typeof exitCode2$1 === "number") {
+      if (exitCode2$1 !== 0) {
+        Pervasives.failwith("should not request input!");
+      } else {
+        Pervasives.failwith("should not halt!");
+      }
+    } else {
+      var match$9 = exitCode2$1[0] === 0;
+      var rotate$1 = match$9 ? /* Left */0 : /* Right */1;
+      robot$1[0] = paintAndMove(robot$1[0], newColor$1, rotate$1);
+    }
+  }
+};
+
+var result$1 = countPaintedPanels(robot$1[0]);
+
+console.log("Part2 result:", result$1);
+
+printHull(robot$1[0]);
+
+var Part2 = /* module */[
+  /* HPR */0,
+  /* program */program$1,
+  /* break */$$break$1,
+  /* computer */computer$1,
+  /* robot */robot$1,
+  /* result */result$1
+];
 
 exports.inputPath = inputPath;
 exports.input = input;
